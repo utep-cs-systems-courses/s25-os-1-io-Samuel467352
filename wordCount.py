@@ -3,6 +3,23 @@
 import os, stat, re
 from sys import stderr, argv
 
+class BufferReader:
+    def __init__(self, fd):
+        self.fd = fd
+        self.buf = b""
+    def get(self):
+        if len(self.buf):
+            c = self.buf[0:1];
+            self.buf = self.buf[1:]
+            return c
+        else:
+            self.buf = os.read(self.fd, 1024*16)
+            if len(self.buf) == 0:
+                return None
+            return self.get()
+            
+        
+
 dict_for_words = dict()
 
 
@@ -33,13 +50,25 @@ def writeToFile(outputFile):
 
 def readFromFile(inputFile):
     fd = os.open(inputFile, os.O_RDONLY)
+    br = BufferReader(fd)
     while True:
-        line = os.read(fd, 1024*16).decode()
+        line = b""
+
+        while True:
+            ch = br.get()
+
+            if not ch:
+                break
+
+            if ch.decode() == '\n':
+                break
+            
+            line += ch
 
         if not line:
             break
-        
-        words = re.split(r'[ \s.?!]', line)
+        line = line.decode()
+        words = re.split(r'[ ;:,.?!]+', line)
 
         for word in words:
             trueWord = word.lower()
